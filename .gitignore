@@ -1,0 +1,15 @@
+/auto-save-list/
+/elpa/
+/eln-cache/
+/transient/
+/url/
+/server/
+/backups/
+/projects.eld
+/recentf
+/savehist
+/places
+/custom.el
+*~
+\#*\#
+.#*
