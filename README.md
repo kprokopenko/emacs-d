@@ -1,7 +1,7 @@
 # Emacs configuration
 
 Open `/Applications/Emacs.app` to start Emacs in macOS fullscreen.
-Use `Command-Shift-P` to open the Emacs command prompt (`M-x`).
+Use `Command-P` to open the Emacs command prompt (`M-x`).
 
 ## Russian input
 
