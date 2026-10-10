@@ -17,6 +17,9 @@
   (setq reverse-im-input-methods '("russian-computer"))
   (reverse-im-mode 1))
 
+;; Open the command prompt with Command-Shift-P, without moving Meta.
+(keymap-global-set "s-P" #'execute-extended-command)
+
 ;; codex.el launches the existing Codex CLI, which reads ~/.codex/config.toml
 ;; and the current ChatGPT sign-in. Leave model and reasoning settings unset
 ;; here so Emacs follows the same defaults as the CLI and Codex desktop app.
