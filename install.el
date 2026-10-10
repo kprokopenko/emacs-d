@@ -8,6 +8,8 @@
   (package-install 'inheritenv))
 (unless (package-installed-p 'eat '(0 9 4))
   (package-install 'eat))
+(unless (package-installed-p 'reverse-im)
+  (package-install 'reverse-im))
 (require 'package-vc)
 (unless (package-installed-p 'codex)
   (package-vc-install "https://github.com/benthamite/codex"))

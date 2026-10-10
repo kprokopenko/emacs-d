@@ -8,6 +8,15 @@
       (unless (member homebrew-bin (split-string (getenv "PATH") path-separator t))
         (setenv "PATH" (concat homebrew-bin path-separator (getenv "PATH")))))))
 
+;; Match the RussianWin layout for Emacs's built-in C-\ input toggle.
+(setq default-input-method "russian-computer")
+
+;; macOS uses Command-Space to switch input sources on this machine.
+;; Translate command keys typed in RussianWin back to their Latin positions.
+(when (require 'reverse-im nil t)
+  (setq reverse-im-input-methods '("russian-computer"))
+  (reverse-im-mode 1))
+
 ;; codex.el launches the existing Codex CLI, which reads ~/.codex/config.toml
 ;; and the current ChatGPT sign-in. Leave model and reasoning settings unset
 ;; here so Emacs follows the same defaults as the CLI and Codex desktop app.
