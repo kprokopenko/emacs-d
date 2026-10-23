@@ -165,20 +165,34 @@
 
 (keymap-global-set "s-o" #'kprokopenko-find-file)
 
+;; Wrap Codex chat at 150 columns, keeping the text left-aligned.
+(use-package visual-fill-column
+  :ensure t
+  :commands visual-fill-column-mode
+  :hook (codex-ide-session-mode . kprokopenko-codex-text-width)
+  :init
+  (defun kprokopenko-codex-text-width ()
+    "Limit the Codex text area to 150 columns without centering."
+    (setq-local visual-fill-column-width 150
+                visual-fill-column-center-text nil)
+    (visual-fill-column-mode 1)))
+
 ;; codex-ide uses the installed Codex CLI and its existing ChatGPT sign-in.
-;; The model comes from ~/.codex/config.toml; this package needs an explicit
-;; reasoning effort, configured below to match the current CLI setting.
+;; Set the Emacs model independently of the shared Codex CLI default.
+;; Keep the explicit reasoning effort aligned with ~/.codex/config.toml.
 (use-package codex-ide
-  :ensure nil
-  :load-path (expand-file-name "../Documents/Codex/emacs-codex-ide"
-                               user-emacs-directory)
+  :vc (:url "https://github.com/kprokopenko/emacs-codex-ide"
+       :branch "fork-dev"
+       :rev :newest)
   :demand t
   :init
   ;; This package sends an explicit effort; match ~/.codex/config.toml.
-  (setq codex-ide-reasoning-effort "high")
+  (setq codex-ide-model "gpt-6.1-sol"
+        codex-ide-reasoning-effort "high")
   :bind (("C-c x" . codex-ide-menu)
          ("C-c a" . codex-ide-annotate-region)
-         ("s-t" . codex-ide))
+         ("s-t" . codex-ide)
+         ("M-t" . codex-ide))
   :config
   ;; New and restored sessions replace the selected window's buffer.
   (setq codex-ide-new-session-split nil
@@ -740,7 +754,7 @@ The first non-nil result takes precedence over GitHub links.")
    '(codex codex-ide consult corfu csv-mode dape eldoc-box forge
            github-review go-mode gotest gptel json-mode marginalia
            md-mode orderless reverse-im ruff-format terraform-mode
-           vertico yaml-mode)))
+           vertico visual-fill-column yaml-mode)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
