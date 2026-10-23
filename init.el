@@ -227,7 +227,7 @@
   "Marker and review buffer saved when visiting a pending Codex request.")
 
 (defun kprokopenko-codex-review-request ()
-  "Visit the oldest pending Codex request, or return to the previous buffer."
+  "Visit the oldest pending Codex request at buffer end, or return."
   (interactive)
   (if (and kprokopenko-codex-review-origin
            (eq (current-buffer)
@@ -239,8 +239,7 @@
           (goto-char origin))
         (set-marker origin nil))
     (let* ((pending (car (kprokopenko-codex-pending-requests)))
-           (session (car pending))
-           (request (cdr pending)))
+           (session (car pending)))
       (unless pending
         (user-error "No pending Codex requests"))
       (when kprokopenko-codex-review-origin
@@ -250,10 +249,7 @@
               (list :point (point-marker)
                     :review-buffer (codex-ide-session-buffer session))))
       (switch-to-buffer (codex-ide-session-buffer session))
-      (let ((start (codex-ide-approvals-data-view-get request :start-marker)))
-        (goto-char (if (and (markerp start) (marker-position start))
-                       start
-                     (point-max)))))))
+      (goto-char (point-max)))))
 
 (defvar kprokopenko-codex-approval-mode-line-map
   (let ((map (make-sparse-keymap)))
