@@ -32,6 +32,9 @@
 ;; Revert unchanged file buffers immediately; keep the confirmation for edits.
 (setq revert-without-query '(".*"))
 
+;; Show recently modified files first in Dired.
+(setq dired-listing-switches "-alt")
+
 ;; Finder/Spotlight-launched apps do not always inherit the shell's PATH.
 (when (eq system-type 'darwin)
   (dolist (directory
@@ -48,6 +51,13 @@
 ;; Match the RussianWin layout for Emacs's built-in C-\ input toggle.
 (setq default-input-method "russian-computer")
 
+;; Swap physical Command (Super) and Option (Meta) throughout Emacs.
+;; Command-F moves by word; Control keeps its usual bindings.
+(when (eq system-type 'darwin)
+  (setq ns-control-modifier 'control
+        ns-command-modifier 'meta
+        ns-option-modifier 'super))
+
 ;; macOS uses Command-Space to switch input sources on this machine.
 ;; Translate command keys typed in RussianWin back to their Latin positions.
 (use-package reverse-im
@@ -57,15 +67,52 @@
   :config
   (reverse-im-mode 1))
 
-;; Open the command prompt with Command-P, without moving Meta.
-(keymap-global-set "s-p" #'execute-extended-command)
-;; Mirror these two Meta commands on Command without changing Meta itself.
+;; Mirror these two Meta commands on Option (Super).
 (keymap-global-set "s-v" #'scroll-down-command)
 (keymap-global-set "s-w" #'kill-ring-save)
-;; Keep code navigation on Command instead of Option/Meta.
+;; Keep code navigation on Option (Super).
 (keymap-global-set "s-." #'xref-find-definitions)
 (keymap-global-set "s->" #'xref-find-references)
-(keymap-global-set "s-," #'xref-go-back)
+
+(defvar-local kprokopenko-scroll-history nil
+  "Cursor and window-start markers saved before scrolling this buffer.")
+
+(defun kprokopenko-scroll-remember (scroll &rest args)
+  "Save the cursor and visible page before SCROLL changes the view using ARGS."
+  (let ((window (selected-window))
+        (origin (point-marker))
+        (start (copy-marker (window-start))))
+    (prog1 (apply scroll args)
+      (when (and (eq (window-buffer window) (marker-buffer origin))
+                 (or (/= (window-point window) origin)
+                     (/= (window-start window) start)))
+        (with-current-buffer (marker-buffer origin)
+          (push (cons origin start) kprokopenko-scroll-history)
+          (setcdr (nthcdr (1- (min (length kprokopenko-scroll-history)
+                                  (max 1 mark-ring-max)))
+                          kprokopenko-scroll-history)
+                  nil))))))
+
+;; Page commands and the mouse wheel both use these scrolling primitives.
+(advice-add 'scroll-up :around #'kprokopenko-scroll-remember)
+(advice-add 'scroll-down :around #'kprokopenko-scroll-remember)
+
+(defun kprokopenko-go-back ()
+  "Go back in xref history, then scroll history, then this buffer's marks."
+  (interactive)
+  (require 'xref)
+  (cond
+   ((not (xref-marker-stack-empty-p)) (xref-go-back))
+   (kprokopenko-scroll-history
+    (let ((location (pop kprokopenko-scroll-history)))
+      (goto-char (car location))
+      (set-window-start (selected-window) (cdr location))
+      (set-marker (car location) nil)
+      (set-marker (cdr location) nil)))
+   (t (pop-to-mark-command))))
+
+(keymap-global-set "M-," #'kprokopenko-go-back)
+(keymap-global-set "s-," #'kprokopenko-go-back)
 (keymap-global-set "C-c l" #'display-line-numbers-mode)
 
 (defun kprokopenko-kill-region-or-backward-word ()
@@ -252,7 +299,7 @@
 (use-package github-review
   :commands (github-review-start github-review-forge-pr-at-point))
 
-;; Open Markdown as a rendered document in the same buffer.  Command-E
+;; Open Markdown as a rendered document in the same buffer.  Option-E
 ;; switches between the read-only rendering and the editable source.
 (use-package textui
   :vc (:url "https://github.com/yibie/textui" :rev :newest))
@@ -614,8 +661,9 @@
 (setq desktop-save t)
 (desktop-save-mode 1)
 
-(global-set-key (kbd "s-<up>") #'beginning-of-buffer)
-(global-set-key (kbd "s-<down>") #'end-of-buffer)
+;; Command is Meta after the modifier swap; keep Command-Up/Down navigation.
+(keymap-global-set "M-<up>" #'beginning-of-buffer)
+(keymap-global-set "M-<down>" #'end-of-buffer)
 
 ;; Copy a link to the current source location.
 (require 'subr-x)
