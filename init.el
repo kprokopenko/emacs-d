@@ -265,7 +265,7 @@
   "Show the number of pending Codex requests in every mode line."
   (let ((count (length (kprokopenko-codex-pending-requests))))
     (when (> count 0)
-      (propertize (format " Codex[%d]" count)
+      (propertize (format " Appr[%d]" count)
                   'face 'warning
                   'mouse-face 'mode-line-highlight
                   'help-echo "Click to review a pending Codex request"
@@ -274,6 +274,79 @@
 (add-to-list 'global-mode-string
              '(:eval (kprokopenko-codex-approval-indicator))
              t)
+
+(defface kprokopenko-codex-idle-mode-line
+  '((t :weight bold))
+  "Bold indicator for Codex chats that are ready for input."
+  :group 'codex-ide)
+
+(defun kprokopenko-codex-idle-sessions ()
+  "Return live Codex sessions that are idle."
+  (seq-filter (lambda (session)
+                (and (buffer-live-p (codex-ide-session-buffer session))
+                     (equal (codex-ide-session-status session) "idle")))
+              codex-ide--sessions))
+
+(defvar kprokopenko-codex-idle-origin nil
+  "Marker and chat buffer saved when visiting an idle Codex chat.")
+
+(defun kprokopenko-codex-visit-idle ()
+  "Visit an idle Codex chat, or return to the previous buffer."
+  (interactive)
+  (if (and kprokopenko-codex-idle-origin
+           (eq (current-buffer)
+               (plist-get kprokopenko-codex-idle-origin :chat-buffer)))
+      (let ((origin (plist-get kprokopenko-codex-idle-origin :point)))
+        (setq kprokopenko-codex-idle-origin nil)
+        (when (marker-buffer origin)
+          (switch-to-buffer (marker-buffer origin))
+          (goto-char origin))
+        (set-marker origin nil))
+    (let* ((buffers (mapcar #'codex-ide-session-buffer
+                            (kprokopenko-codex-idle-sessions)))
+           (buffer (pcase buffers
+                     ('nil (user-error "No idle Codex chats"))
+                     (`(,only) only)
+                     (_ (get-buffer
+                         (completing-read "Idle Codex chat: "
+                                          (mapcar #'buffer-name buffers)
+                                          nil t))))))
+      (when kprokopenko-codex-idle-origin
+        (set-marker (plist-get kprokopenko-codex-idle-origin :point) nil))
+      (setq kprokopenko-codex-idle-origin
+            (unless (eq (current-buffer) buffer)
+              (list :point (point-marker) :chat-buffer buffer)))
+      (switch-to-buffer buffer)
+      (goto-char (point-max)))))
+
+(defvar kprokopenko-codex-idle-mode-line-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map [mode-line mouse-1] #'kprokopenko-codex-visit-idle)
+    map)
+  "Mouse binding for the idle Codex chat indicator.")
+
+(defun kprokopenko-codex-idle-indicator ()
+  "Show the number of idle Codex chats in every mode line."
+  (let ((count (length (kprokopenko-codex-idle-sessions))))
+    (when (> count 0)
+      (propertize (format " Idle[%d] " count)
+                  'face 'kprokopenko-codex-idle-mode-line
+                  'mouse-face 'mode-line-highlight
+                  'help-echo "Click to visit an idle Codex chat / return"
+                  'local-map kprokopenko-codex-idle-mode-line-map))))
+
+(add-to-list 'global-mode-string
+             '(:eval (kprokopenko-codex-idle-indicator))
+             t)
+
+(defun kprokopenko-codex-visit-ready ()
+  "Visit a pending Codex request, otherwise an idle chat."
+  (interactive)
+  (if (kprokopenko-codex-pending-requests)
+      (kprokopenko-codex-review-request)
+    (kprokopenko-codex-visit-idle)))
+
+(keymap-global-set "C-x v" #'kprokopenko-codex-visit-ready)
 
 (defun kprokopenko-codex-notify-interactive-request (session message-text)
   "Notify about a Codex request without changing the window layout."
@@ -285,8 +358,8 @@
           (lambda (_event _session _payload)
             (force-mode-line-update t)))
 (transient-append-suffix 'codex-ide-menu "l"
-                         '("v" "Review request / return"
-                           kprokopenko-codex-review-request))
+                         '("v" "Visit approval / idle / return"
+                           kprokopenko-codex-visit-ready))
 
 ;; Chat and in-buffer rewriting through the ChatGPT subscription.
 ;; OAuth credentials are stored separately from the Codex CLI sign-in.
