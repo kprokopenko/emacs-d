@@ -19,3 +19,6 @@
 *~
 \#*\#
 .#*
+
+# Private machine-specific configuration.
+/local/

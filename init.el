@@ -243,9 +243,7 @@
           (body-function . select-window))))
 
 (use-package magit
-  :commands magit-status
-  :config
-  (load (expand-file-name "kprokopenko-arc-magit.el" user-emacs-directory)))
+  :bind ("C-x g" . magit-status))
 
 ;; Browse GitHub pull requests from Magit and review their diffs in Emacs.
 (use-package forge
@@ -619,7 +617,7 @@
 (global-set-key (kbd "s-<up>") #'beginning-of-buffer)
 (global-set-key (kbd "s-<down>") #'end-of-buffer)
 
-;; Copy a link to the current Arcadia or GitHub source location.
+;; Copy a link to the current source location.
 (require 'subr-x)
 (require 'url-util)
 
@@ -640,24 +638,25 @@
        ((string-match "\\`git@github\\.com:\\([^?#]+\\)\\'" url)
         (match-string 1 url))))))
 
+(defvar kprokopenko-code-link-functions nil
+  "Functions called with a path to return a source URL, or nil.
+The first non-nil result takes precedence over GitHub links.")
+
 (defun kprokopenko-copy-code-link ()
-  "Copy an Arcanum or GitHub link for the current file or Dired entry."
+  "Copy a source link for the current file or Dired entry."
   (interactive)
   (let* ((in-dired (derived-mode-p 'dired-mode))
          (path (if in-dired (dired-get-file-for-visit) (buffer-file-name)))
          (directory (when path (if (file-directory-p path)
                                    path
                                  (file-name-directory path))))
-         (arc-root (and directory
-                        (locate-dominating-file directory ".arcadia.root")))
          (line (if (or in-dired (not path) (file-directory-p path))
                    ""
                  (format "#L%d" (line-number-at-pos))))
          (base
           (cond
-           (arc-root
-            (concat "https://a.yandex-team.ru/arcadia/"
-                    (file-relative-name path arc-root)))
+           ((and path (run-hook-with-args-until-success
+                       'kprokopenko-code-link-functions path)))
            (directory
             (let* ((git-root (kprokopenko--git-output directory "rev-parse" "--show-toplevel"))
                    (remote (and git-root
@@ -665,7 +664,7 @@
                    (repo (kprokopenko--github-repository remote))
                    (revision (and repo (kprokopenko--git-output directory "rev-parse" "HEAD"))))
               (unless (and git-root repo revision)
-                (user-error "Current file is outside Arcadia or a GitHub repository with origin"))
+                (user-error "Current file is outside a GitHub repository with origin"))
               (let ((relative (file-relative-name path git-root)))
                 (concat "https://github.com/" repo "/"
                         (if (file-directory-p path) "tree" "blob")
@@ -679,6 +678,9 @@
       url)))
 
 (keymap-global-set "C-c L" #'kprokopenko-copy-code-link)
+
+;; Load private settings when available.
+(load (expand-file-name "local/init.el" user-emacs-directory) t t)
 
 ;;; init.el ends here
 (custom-set-variables
