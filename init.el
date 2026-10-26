@@ -178,17 +178,15 @@
     (visual-fill-column-mode 1)))
 
 ;; codex-ide uses the installed Codex CLI and its existing ChatGPT sign-in.
-;; Set the Emacs model independently of the shared Codex CLI default.
-;; Keep the explicit reasoning effort aligned with ~/.codex/config.toml.
+;; Set the Emacs model and effort independently of the shared Codex CLI defaults.
 (use-package codex-ide
   :vc (:url "https://github.com/kprokopenko/emacs-codex-ide"
        :branch "fork-dev"
        :rev :newest)
   :demand t
   :init
-  ;; This package sends an explicit effort; match ~/.codex/config.toml.
   (setq codex-ide-model "gpt-6.1-sol"
-        codex-ide-reasoning-effort "high")
+        codex-ide-reasoning-effort "ultra")
   :bind (("C-c x" . codex-ide-menu)
          ("C-c a" . codex-ide-annotate-region)
          ("s-t" . codex-ide)
@@ -385,7 +383,7 @@
         gptel-backend
         (gptel-make-openai-oauth
          "OpenAI subscription"
-         :request-params '(:reasoning (:effort "high")))
+         :request-params '(:reasoning (:effort "ultra")))
         gptel-display-buffer-action
         '((display-buffer-same-window)
           (body-function . select-window))))
