@@ -192,8 +192,26 @@
   :bind (("C-c x" . codex-ide-menu)
          ("C-c a" . codex-ide-annotate-region)
          ("s-t" . codex-ide)
-         ("M-t" . codex-ide))
+         ("M-t" . codex-ide)
+         ("s-T" . kprokopenko-codex-ide-without-file-context)
+         ("M-T" . kprokopenko-codex-ide-without-file-context))
   :config
+  (defun kprokopenko-codex-ide-file-context-enabled-p ()
+    "Return non-nil when the current chat includes focused-file context."
+    (codex-ide--emacs-context-policy-includes-p 'prompt))
+
+  ;; Keep the focus header consistent with the context sent to Codex.
+  (advice-add 'codex-ide--get-active-buffer-context :before-while
+              #'kprokopenko-codex-ide-file-context-enabled-p)
+
+  (defun kprokopenko-codex-ide-without-file-context ()
+    "Start a new Codex chat without focused-file or selection context."
+    (interactive)
+    (let ((session (codex-ide)))
+      (with-current-buffer (codex-ide-session-buffer session)
+        (setq-local codex-ide-emacs-context-policy 'session)
+        (codex-ide--update-header-line session))
+      session))
   ;; New and restored sessions replace the selected window's buffer.
   (setq codex-ide-new-session-split nil
         codex-ide-buffer-display-when-approval-required nil
